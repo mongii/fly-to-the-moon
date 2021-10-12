@@ -1,0 +1,280 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<title>Fly to the Moon</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+<link href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+<link rel="stylesheet" href="./asset/style.css">
+
+</head>
+
+<body draggable="false">
+<!-- draw the map -->
+    <div class="form-row">
+        <div class="form-group col-sm-1">
+            <select id="xDimension" class="form-control">
+                <option value=4 selected>5</option>
+                <option value=5>6</option>
+                <option value=6>7</option>
+                <option value=7>8</option>
+                <option value=8>9</option>
+                <option value=9>10</option>
+            </select>
+        </div>
+        <div class="form-group col-sm-1">
+            <select id="yDimension" class="form-control">
+                <option value=4 selected>5</option>
+                <option value=5>6</option>
+                <option value=6>7</option>
+                <option value=7>8</option>
+                <option value=8>9</option>
+                <option value=9>10</option>
+            </select>
+        </div>
+        <div class="form-group col-md-2">
+            <button onClick="draw();" class="btn btn-primary">Draw the Moon map</button>
+        </div>
+    </div>
+<!-- end draw the map -->
+<!-- locate your robot -->
+    <div 
+        id="faceOption" class="form-row">
+    </div>
+<!-- end locate your robot -->
+
+<!-- Moving command --> 
+    <div id="CommandInput" class="form-row"> </div>
+    <div id="MoveButtonRow">
+        <div class="MoveButton" onClick="move()">
+            Move
+        </div>
+        <div class="MoveButton" onClick="left()">
+            Left
+        </div>
+        <div class="MoveButton" onClick="right()">
+            Right
+        </div>
+    </div>
+<!-- end moving command -->  
+
+<!-- Report -->
+	<div>
+        <div id="Position" class="Position">
+        </div>
+
+		<table id="board" draggable="false"></table>	
+	</div>
+<!-- end report -->
+
+</body>
+<!-- Place the robot in -->
+<script src="./Position.js"></script> 
+
+<script type="text/javascript">
+
+    var position;
+
+    const NORTH="NORTH";
+    const SOUTH="SOUTH";
+    const WEST="WEST";
+    const EAST="EAST";
+
+// draw the map 
+
+    function draw() {
+        var x = document.getElementById("xDimension");
+        var width = x.options[x.selectedIndex].value;
+
+        var y = document.getElementById("yDimension");
+        var height = y.options[y.selectedIndex].value;
+
+        let tableHTML = "";
+
+        for (let r = height; r >= 0; r--) {
+            let currentArrayRow = [];
+            let currentHTMLRow = `<tr draggable="false" id="row ${r}">`;
+            for (let c = 0; c <= width; c++) {
+                let newNodeId = `${c}-${r}`;
+
+                currentHTMLRow += `<td draggable="false" id="${newNodeId}" class="Unvisited"></td>`;
+            }
+            tableHTML += `${currentHTMLRow}</tr>`;
+        }	
+        let board = document.getElementById("board");
+        board.innerHTML = tableHTML;
+        position = new Position(0,0,NORTH,width,height);
+        Robot(position.getCurrentPosition());
+
+        displayPosition();
+        displayCommandInput();
+        displayOption();
+    }
+// display all options 
+    function displayOption() {
+
+        var xDimension = document.getElementById("xDimension")
+        var yDimension = document.getElementById("yDimension")
+        var width = xDimension.options[xDimension.selectedIndex].value;
+        var height = yDimension.options[yDimension.selectedIndex].value;
+
+        let yPositionOption = ""; 
+        for (let y = 1; y <= height; y++) {
+            yPositionOption += `<option value=${y}>${y}</option>`;
+        }
+
+        let xPositionOption = ""; 
+        for (let x = 1; x <= width; x++) {
+            xPositionOption += `<option value=${x}>${x}</option>`;
+        }
+
+        let faceOptionHTML=
+        `<div class="form-group col-sm-1">
+            <select id="xPosition" class="form-control">
+                <option value=0 selected>0</option>
+                ${xPositionOption}
+            </select>
+        </div>
+        <div class="form-group col-sm-1">
+            <select id="yPosition" class="form-control">
+                <option value=0 selected>0</option>
+                ${yPositionOption}
+            </select>
+        </div>
+        <div class="form-group col-sm-1">
+            <select id="face" class="form-control">
+                <option selected>NORTH</option>
+                <option>SOUTH</option>
+                <option>EAST</option>
+                <option>WEST</option>
+            </select>
+        </div>
+        <div class="form-group col-md-2">
+            <button onClick="place()" class="btn btn-primary"> Activate Robot </button>
+        </div>`
+        let faceOption = document.getElementById("faceOption");
+        faceOption.innerHTML = faceOptionHTML;
+
+        document.getElementById("MoveButtonRow").style.display = "inline";
+    }
+
+    function displayPosition() {
+        let Position = document.getElementById("Position");
+        Position.innerHTML = "";
+
+        var result = position.getCurrentPosition();
+        let positionHTML=
+        `
+            <div class="PositionBlock">
+                ${result.xPos}
+            </div>
+            <div class="PositionBlock">
+                ${result.yPos}
+            </div>
+            <div class="PositionBlock">
+                ${result.face}
+            </div>
+        `
+        Position.innerHTML = positionHTML;
+    }
+
+    function displayCommandInput() {
+        let Position = document.getElementById("CommandInput");
+        Position.innerHTML = 
+        `
+        <div class="form-group col-md-3">
+            <input type="text" class="form-control" id="MovementCommand" placeholder="Only: M, R, L are allowed">
+        </div>
+        
+        <div class="form-group col-md-2">
+            <button class="btn btn-primary mb-2" onClick="runCommand();">Run Command</button>
+        </div>
+        `;
+    }
+// run commands 
+    function runCommand() {
+        let commands = document.getElementById("MovementCommand").value.split("");
+
+        for (var i = 0; i < commands.length; i++) {
+            switch(commands[i]) {
+                case "M":
+                    move()
+                    break;
+
+                case "R":
+                    right();
+                    break;
+
+                case "L":
+                    left();
+                    break;
+                break;
+                
+                default:
+                    break;
+            }
+        }
+        document.getElementById("MovementCommand").value = "";
+    }
+// based commands 
+    function place() {
+        var x = document.getElementById("xPosition");
+        var xPosition = x.options[x.selectedIndex].value;
+
+        var y = document.getElementById("yPosition");
+        var yPosition = y.options[y.selectedIndex].value;
+
+        var f = document.getElementById("face");
+        var face = f.options[f.selectedIndex].value;
+
+        var result = position.place(xPosition, yPosition, face);
+
+        displayPosition();
+        Robot(result)
+    }
+// moving commands 
+    function move() {
+        var result = position.move();
+
+        displayPosition();
+        Robot(result)
+    }
+
+    function left() {
+        var result = position.left();
+
+        displayPosition();
+        Robot(result)
+    }
+
+    function right() {
+        var result = position.right();
+
+        displayPosition();
+        Robot(result)
+    }
+
+    function Robot(newPosition) {
+        var prevCell = `${newPosition.xPosPrev}-${newPosition.yPosPrev}`;
+        let prevElement = document.getElementById(prevCell);
+        prevElement.innerHTML = "";
+        
+        var currCell = `${newPosition.xPos}-${newPosition.yPos}`;
+        let currElement = document.getElementById(currCell);
+
+        switch(newPosition.face) {
+            case NORTH:
+                currElement.innerHTML = `<img src="./asset/${NORTH}.gif"/>`; 
+                break;
+            case SOUTH:
+                currElement.innerHTML = `<img src="./asset/${SOUTH}.gif"/>`;
+                break;
+            case EAST:
+                currElement.innerHTML = `<img src="./asset/${EAST}.gif"/>`;
+                break;
+            case WEST:
+                currElement.innerHTML = `<img src="./asset/${WEST}.gif"/>`;
+                break;
+        }
+    }
+</script> 
